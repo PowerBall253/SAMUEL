@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=SAMUEL
+Comment=Tool for extracting assets from DOOM Eternal.
+Exec=samuel
+Icon=samuel
+Categories=Utility;

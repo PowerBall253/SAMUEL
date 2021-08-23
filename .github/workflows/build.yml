@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: build-appimage
+
+    - name: Clone SAMUEL repo
+      uses: actions/checkout@v2
+      with:
+        repository: brongo/SAMUEL
+        ref: main
+        path: repo
+
+    - name: Create missing directories
+      run: |
+        mkdir ${{github.workspace}}/app/usr/bin
+        mkdir ${{github.workspace}}/app/usr/lib
+        
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+
+    - name: Build with CMake
+      run: |
+        export CC=gcc-10
+        export CXX=g++-10
+        cd ${{github.workspace}}/repo
+        cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        cmake --build build --config ${{env.BUILD_TYPE}}
+        cp build/SAMUEL ${{github.workspace}}/app/usr/bin/samuel
+        cd ..
+
+    - name: Turn into AppImage
+      run: |
+        wget https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage
+        chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+        mv .git .gitbck
+        ./linuxdeployqt-continuous-x86_64.AppImage ${{github.workspace}}/app/usr/share/applications/samuel.desktop -appimage -bundle-non-qt-libs
+        mv .gitbck .git
+
+    - name: Upload AppImage
+      uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        prerelease: false
+        files: ${{github.workspace}}/SAMUEL-*.AppImage
