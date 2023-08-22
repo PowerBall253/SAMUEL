@@ -28,6 +28,9 @@ jobs:
       run: |
         mkdir ${{github.workspace}}/app/usr/bin
         mkdir ${{github.workspace}}/app/usr/lib
+
+    - name: Install dependencies
+      run: sudo apt install -y libxcb-cursor0
         
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
