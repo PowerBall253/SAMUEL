@@ -30,7 +30,7 @@ jobs:
         mkdir ${{github.workspace}}/app/usr/lib
         
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+      uses: jurplel/install-qt-action@v3
       with:
         version: '6.5.*'
 
