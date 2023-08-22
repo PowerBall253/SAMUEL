@@ -10,7 +10,7 @@ env:
 
 jobs:
   linux-build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
     - uses: actions/checkout@v2
@@ -31,11 +31,11 @@ jobs:
         
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
+      with:
+        version: 6.*
 
     - name: Build with CMake
       run: |
-        export CC=gcc-10
-        export CXX=g++-10
         cd ${{github.workspace}}/repo
         cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
         cmake --build build --config ${{env.BUILD_TYPE}}
