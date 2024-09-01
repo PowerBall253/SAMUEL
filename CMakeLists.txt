@@ -66,10 +66,11 @@ set(PROJECT_SOURCES
     ./source/qt/main.cpp
     ./vendor/jsonxx/jsonxx.cc
     ./vendor/jsonxx/jsonxx.h
+    ./vendor/ooz/ooz.h
 )
 
 if (NOT WIN32)
-    set(PROJECT_SOURCES ${PROJECT_SOURCES} ./vendor/detex/detex.h ./vendor/ooz/ooz.hpp)
+    set(PROJECT_SOURCES ${PROJECT_SOURCES} ./vendor/detex/detex.h)
 endif()
 
 set(APP_ICON_RESOURCE_WINDOWS "./resources/icon.rc")
@@ -98,10 +99,16 @@ target_link_libraries(SAMUEL PRIVATE Qt${QT_VERSION_MAJOR}::Widgets ${CMAKE_DL_L
 
 if (WIN32)
     target_link_libraries(SAMUEL PRIVATE DirectXTex)
+
+    if (MSVC)
+        target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ooz/ooz_msvc.lib)
+    else()
+        target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz_mingw.a)
+    endif()
 else()
     find_package(PNG REQUIRED)
     include_directories(${PNG_INCLUDE_DIR})
-    target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/detex/libdetex.a ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz.a ${PNG_LIBRARY})
+    target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/detex/libdetex.a ${PNG_LIBRARY} ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz_linux.a)
 endif()
 
 if (MSVC)

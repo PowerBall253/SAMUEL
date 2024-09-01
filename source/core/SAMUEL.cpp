@@ -229,15 +229,6 @@ namespace HAYDEN
         if (!SetBasePath(resourcePath))
             return 0;
 
-        if (!oodleInit(_BasePath))
-        {
-            ThrowError(1,
-                "Failed to load the oodle dll.",
-                "Make sure the oo2core_8_win64.dll file is present in your game directory."
-            );
-            return 0;
-        }
-
         LoadPackageMapSpec();
         return 1;
     }
