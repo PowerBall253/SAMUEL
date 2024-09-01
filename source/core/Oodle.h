@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../vendor/ooz/ooz.hpp"
+#include "../../vendor/ooz/ooz.h"
 
 #include <string>
 #include <vector>
