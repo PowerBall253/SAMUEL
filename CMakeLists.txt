@@ -14,6 +14,11 @@ set(CMAKE_AUTORCC ON)
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 
+set(BUILD_TOOLS OFF CACHE BOOL "Build tex command-line tools" FORCE)
+set(BUILD_SAMPLE OFF CACHE BOOL "Build DDSView sample (requires fxc.exe)" FORCE)
+set(BUILD_DX11 OFF CACHE BOOL "Build with DirectX11 Runtime support (requires fxc.exe)" FORCE)
+set(BUILD_DX12 OFF CACHE BOOL "Build with DirectX12 Runtime support" FORCE)
+
 if (NOT WIN32)
     include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
     set(ENABLE_LIBPNG_SUPPORT ON CACHE BOOL "Build with libpng support")
