@@ -1,4 +1,5 @@
 #include "Utilities.h"
+#include <filesystem>
 
 namespace HAYDEN
 {
@@ -21,6 +22,10 @@ namespace HAYDEN
     // Recursive mkdir, bypassing PATH_MAX limitations on Windows       
     bool mkpath(const fs::path& path)
     {
+        if (fs::is_directory(path)) {
+            return true;
+        }
+
         std::error_code ec;
         #ifdef _WIN32
         // "\\?\" alongside the wide string functions is used to bypass PATH_MAX
@@ -61,13 +66,10 @@ namespace HAYDEN
         fs::path folderPath = outPath;
         folderPath.remove_filename();
 
-        if (!fs::exists(folderPath))
+        if (!mkpath(folderPath))
         {
-            if (!mkpath(folderPath))
-            {
-                fprintf(stderr, "Error: Failed to create directories for file: %s \n", outPath.string().c_str());
-                return 0;
-            }
+            fprintf(stderr, "Error: Failed to create directories for file: %s \n", outPath.string().c_str());
+            return 0;
         }
 
         // open file for writing

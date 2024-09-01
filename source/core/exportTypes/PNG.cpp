@@ -1,5 +1,6 @@
 #include "PNG.h"
 #include "../../../vendor/DirectXTex/DirectXTex/DirectXTex.h"
+#include "source/core/Utilities.h"
 
 #ifdef __linux__
 #include "../../../vendor/DirectXTex/Auxiliary/DirectXTexPNG.h"
@@ -82,6 +83,14 @@ namespace HAYDEN
 
         // Construct final raw image for converting to PNG
         auto rawImage = scratchImageDecompressed.GetImage(0, 0, 0);
+
+        // Create out directory
+        fs::path exportDir = exportPath;
+        exportDir.remove_filename();
+        if (!mkpath(exportDir)) {
+            fprintf(stderr, "Error: Failed to create directories for file: %s \n", exportPath.string().c_str());
+            return false;
+        }
 
         // Convert to PNG and save
 #ifdef _WIN32
