@@ -1,28 +1,30 @@
 #include "PNG.h"
+#include "../../../vendor/DirectXTex/DirectXTex/DirectXTex.h"
+
+#ifdef __linux__
+#include "../../../vendor/DirectXTex/Auxiliary/DirectXTexPNG.h"
+#endif
 
 namespace HAYDEN
 {
-    // Convert DDS file to PNG (using DirectXTex on Windows, else use Detex library)
-    std::vector<uint8_t> PNGFile::ConvertDDStoPNG(std::vector<uint8_t> inputDDS,ImageType imageType, bool reconstructZ)
+    // Convert DDS file to PNG using DirectXTex
+    bool PNGFile::ConvertDDStoPNG(std::vector<uint8_t> inputDDS, ImageType imageType, fs::path exportPath, bool reconstructZ)
     {
-        std::vector<uint8_t> outputPNG;
-
 #ifdef _WIN32
-        
-        // Windows systems use the DirectXTex library to convert a DDS file to PNG format
         HRESULT initCOM = CoInitializeEx(NULL, COINIT_MULTITHREADED);
         if (FAILED(initCOM))
         {
             fprintf(stderr, "ERROR: Failed to initialize the COM library. \n");
-            return outputPNG;
+            return false
         }
+#endif
 
         // Read DDS binary data into DirectX::ScratchImage
         DirectX::ScratchImage scratchImage;
-        if (DirectX::LoadFromDDSMemory(inputDDS.data(), inputDDS.size(), DirectX::DDS_FLAGS_NONE, NULL, scratchImage) != 0)
+        if (DirectX::LoadFromDDSMemory(inputDDS.data(), inputDDS.size(), DirectX::DDS_FLAGS_NONE, nullptr, scratchImage) != 0)
         {
             fprintf(stderr, "ERROR: Failed to read DDS data from given file. \n");
-            return outputPNG;
+            return false;
         }
 
         // Decompress DDS image and storeRead DDS binary data into DirectX::ScratchImage
@@ -72,7 +74,7 @@ namespace HAYDEN
                     }, scratchReconstructedZ);
 
                 if (FAILED(restoreZ))
-                    return outputPNG;
+                    return false;
 
                 scratchImageDecompressed = std::move(scratchReconstructedZ);
             }
@@ -81,147 +83,23 @@ namespace HAYDEN
         // Construct final raw image for converting to PNG
         auto rawImage = scratchImageDecompressed.GetImage(0, 0, 0);
 
-        // Convert to PNG
-        DirectX::Blob pngImage;
-        if (DirectX::SaveToWICMemory(*rawImage, DirectX::WIC_FLAGS_NONE, DirectX::GetWICCodec(DirectX::WIC_CODEC_PNG), pngImage, &GUID_WICPixelFormat32bppBGRA) != 0) {
+        // Convert to PNG and save
+#ifdef _WIN32
+        // "\\?\" alongside the wide string functions is used to bypass PATH_MAX
+        // Check https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd for details
+        std::wstring wPath = L"\\\\?\\" + exportPath.wstring();
+
+        if (DirectX::SaveToWICFile(*rawImage, DirectX::WIC_FLAGS_NONE, DirectX::GetWICCodec(DirectX::WIC_CODEC_PNG), wPath.c_str(), &GUID_WICPixelFormat32bppBGRA) != 0) {
             fprintf(stderr, "ERROR: Failed to write new PNG file. \n");
-            return outputPNG;
+            return false;
         }
-
-        // Copy DirectX::Blob data into byte vector
-        auto* p = reinterpret_cast<unsigned char*>(pngImage.GetBufferPointer());
-        auto  n = pngImage.GetBufferSize();
-
-        outputPNG.reserve(n);
-        std::copy(p, p + n, std::back_inserter(outputPNG));
-
 #else
-        // Non-Windows systems use the Detex library to convert a DDS file to PNG format
-        bool failed = 0;
-        fs::path fullPath = fs::temp_directory_path() / "samuel.tmp";
-
-        FILE* outFile = fopen(fullPath.string().c_str(), "wb");
-        fwrite(inputDDS.data(), 1, inputDDS.size(), outFile);
-        fclose(outFile);
-
-        // Load DDS file
-        detexTexture pngTexture;
-        pngTexture.format = DETEX_PIXEL_FORMAT_RGBA8;
-        std::unique_ptr<uint8_t> pngData;
-        int sourceFormat;
-        bool isDDS = false;
-
-        // Check format
-        switch (imageType)
-        {
-            case ImageType::FMT_BC1_ZERO_ALPHA:
-            case ImageType::FMT_BC1_SRGB:
-            case ImageType::FMT_BC1_LINEAR:
-            case ImageType::FMT_BC3_SRGB:
-            case ImageType::FMT_BC3_LINEAR:
-            case ImageType::FMT_BC4_LINEAR:
-            case ImageType::FMT_BC5_LINEAR:
-            case ImageType::FMT_BC6H_UF16:
-            case ImageType::FMT_BC7_SRGB:
-            case ImageType::FMT_BC7_LINEAR:
-                isDDS = true;
-                sourceFormat = DETEX_PIXEL_FORMAT_RGBA8;
-                break;
-            case ImageType::FMT_RGBA8:
-                sourceFormat = DETEX_PIXEL_FORMAT_RGBA8;
-                break;
-            case ImageType::FMT_ALPHA:
-                sourceFormat = DETEX_PIXEL_FORMAT_A8;
-                break;
-            case ImageType::FMT_RG8:
-                sourceFormat = DETEX_PIXEL_FORMAT_RG8;
-                break;
+        if (DirectX::SaveToPNGFile(*rawImage, exportPath.wstring().c_str()) != 0) {
+            fprintf(stderr, "ERROR: Failed to write new PNG file. \n");
+            return false;
         }
-
-        if (isDDS)
-        {
-            // Load DDS
-            detexTexture* ddsTexture = NULL;
-            if (detexLoadDDSFile(fullPath.c_str(), &ddsTexture)) {
-                // Create output png
-                pngTexture.width = ddsTexture->width;
-                pngTexture.height = ddsTexture->height;
-                pngTexture.width_in_blocks = ddsTexture->width;
-                pngTexture.height_in_blocks = ddsTexture->height;
-                pngData.reset(new uint8_t[detexGetPixelSize(pngTexture.format) * pngTexture.width * pngTexture.height]);
-                pngTexture.data = pngData.get();
-
-                // Decompress DDS
-                if (!detexDecompressTextureLinear(ddsTexture, pngTexture.data, pngTexture.format))
-                {
-                    fprintf(stderr, "ERROR: Failed to decompress DDS file. \n");
-                    failed = 1;
-                }
-            }
-            else
-            {
-                fprintf(stderr, "ERROR: Failed to decompress DDS file. \n");
-                failed = 1;
-            }
-
-            if (ddsTexture)
-                free(ddsTexture);
-        }
-        else
-        {
-            // Load as raw
-            pngTexture.width = *(int*)(inputDDS.data() + 16);
-            pngTexture.height = *(int*)(inputDDS.data() + 12);
-            pngTexture.width_in_blocks = pngTexture.width;
-            pngTexture.height_in_blocks = pngTexture.height;
-            pngData.reset(new uint8_t[detexGetPixelSize(pngTexture.format) * pngTexture.width * pngTexture.height]);
-            pngTexture.data = pngData.get();
-
-            // Convert to RGBA8
-            switch (sourceFormat)
-            {
-                case DETEX_PIXEL_FORMAT_A8:
-                    for (size_t i = 0; i < inputDDS.size() - 128; i++)
-                    {
-                        // Set RGB bytes to default
-                        pngData.get()[i * 4] = 255;
-                        pngData.get()[i * 4 + 1] = 255;
-                        pngData.get()[i * 4 + 2] = 255;
-
-                        // Set alpha byte
-                        pngData.get()[i * 4 + 3] = inputDDS[128 + i];
-                    }
-                    break;
-                case DETEX_PIXEL_FORMAT_RG8:
-                    for (size_t i = 0; i < inputDDS.size() - 128; i += 2)
-                    {
-                        // Set RG bytes
-                        pngData.get()[i * 2] = inputDDS[128 + i];
-                        pngData.get()[i * 2 + 1] = inputDDS[128 + i + 1];
-
-                        // Set BA bytes to default
-                        pngData.get()[i * 2 + 2] = 255;
-                        pngData.get()[i * 2 + 3] = 255;
-                    }
-                    break;
-            }
-        }
-
-        // Save as PNG
-        if (!failed)
-        {
-            if (!detexSavePNGFile(&pngTexture, fullPath.c_str()))
-                fprintf(stderr, "ERROR: Failed to convert DDS file to PNG. \n");
-
-            if (!readFile(fullPath, outputPNG))
-                fprintf(stderr, "ERROR: Failed to read PNG file to memory. \n");
-        }
-
-        // Clean up memory and temp files
-        std::error_code ec;
-        fs::remove(fullPath, ec);
-
 #endif
-        return outputPNG;
+
+        return true;
     }
 }

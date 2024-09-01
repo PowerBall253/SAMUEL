@@ -14,9 +14,12 @@ set(CMAKE_AUTORCC ON)
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 
-if (WIN32)
-    add_subdirectory(./vendor/DirectXTex)
+if (NOT WIN32)
+    include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
+    set(ENABLE_LIBPNG_SUPPORT ON CACHE BOOL "Build with libpng support")
 endif()
+
+add_subdirectory(./vendor/DirectXTex)
 
 set(PROJECT_SOURCES
     ./source/core/exportTypes/DDSHeader.cpp
@@ -69,10 +72,6 @@ set(PROJECT_SOURCES
     ./vendor/ooz/ooz.h
 )
 
-if (NOT WIN32)
-    set(PROJECT_SOURCES ${PROJECT_SOURCES} ./vendor/detex/detex.h)
-endif()
-
 set(APP_ICON_RESOURCE_WINDOWS "./resources/icon.rc")
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -95,20 +94,16 @@ else()
     endif()
 endif()
 
-target_link_libraries(SAMUEL PRIVATE Qt${QT_VERSION_MAJOR}::Widgets ${CMAKE_DL_LIBS})
+target_link_libraries(SAMUEL PRIVATE Qt${QT_VERSION_MAJOR}::Widgets ${CMAKE_DL_LIBS} DirectXTex)
 
 if (WIN32)
-    target_link_libraries(SAMUEL PRIVATE DirectXTex)
-
     if (MSVC)
         target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ooz/ooz_msvc.lib)
     else()
         target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz_mingw.a)
     endif()
 else()
-    find_package(PNG REQUIRED)
-    include_directories(${PNG_INCLUDE_DIR})
-    target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/detex/libdetex.a ${PNG_LIBRARY} ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz_linux.a)
+    target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz_linux.a)
 endif()
 
 if (MSVC)
