@@ -25,7 +25,7 @@ namespace HAYDEN
     bool mkpath(const fs::path& path);
 
     // Opens FILE* with long filepath, bypasses PATH_MAX limitations in Windows
-    FILE* openLongFilePathWin32(const fs::path& path);
+    FILE* openLongFilePath(const fs::path& path);
 
     // Removes quotation marks from a string
     std::string stripQuotes(std::string str);
