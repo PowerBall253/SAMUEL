@@ -19,7 +19,11 @@ namespace HAYDEN
         return stream.str();
     }
     uint64_t hexToInt64(const std::string hex);
-    void endianSwap(uint64_t& value);
+    void endianSwap32(uint32_t& value);
+    void endianSwap64(uint64_t& value);
+
+    // 64bit fseek for windows
+    int fseek64(FILE* f, long long offset, int origin);
 
     // Recursive mkdir, bypassing PATH_MAX limitations on Windows
     bool mkpath(const fs::path& path);

@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>SAMUEL v2.1.3-alpha by SamPT</string>
+   <string>SAMUEL v3.0-alpha by SamPT</string>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -245,6 +245,11 @@
           <string>Status</string>
          </property>
         </column>
+        <column>
+         <property name="text">
+          <string>IDCL</string>
+         </property>
+        </column>
        </widget>
       </item>
      </layout>
@@ -457,7 +462,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

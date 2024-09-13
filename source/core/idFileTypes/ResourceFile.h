@@ -4,8 +4,6 @@
 #include <vector>
 #include <filesystem>
 
-#include "ResourceFile.h"
-
 #pragma pack(push)  // Not portable, sorry.
 #pragma pack(1)     // Works on my machine (TM).
 
@@ -110,6 +108,12 @@ namespace HAYDEN
         /* 0x1C */ uint32_t Unk1C = 0;                  // file ID ??  but often 0x0000 for some file types, like .lwo
     };
 
+    enum EntryType
+    {
+        TYPE_IDCL = 0,
+        TYPE_PLAINTEXT = 1
+    };
+
     class ResourceFile
     {
         public:
@@ -125,6 +129,7 @@ namespace HAYDEN
 
             // Reads a binary .resources file from local filesystem
             ResourceFile(const fs::path& filePath);
+            ResourceFile(){};
 
         private:
 

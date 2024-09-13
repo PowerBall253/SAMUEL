@@ -44,4 +44,35 @@ namespace HAYDEN
         uint16_t Flags1 = 0;               // indicates model type. 60 is standard. 124 = UV Lightmap
         uint16_t Flags2 = 0;               // always 2 (?)
     };
+
+    struct Vector2 {
+        float x = 0;
+        float y = 0;
+    };
+
+    struct Vector3 {
+        float x = 0;
+        float y = 0;
+        float z = 0;
+    };
+
+    struct Vector4 {
+        float x = 0;
+        float y = 0;
+        float z = 0;
+        float w = 0;
+    };
+
+    struct Mat3 {
+        Vector3 mat[3];
+    };
+
+    struct Mat3x4 {
+        float mat[12];
+    };
+
+    struct Bounds {
+        Vector3 min;
+        Vector3 max;
+    };
 }

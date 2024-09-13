@@ -14,38 +14,27 @@ namespace HAYDEN
 {
     struct LWO_METADATA
     {
-	uint64_t NullPad64_0 = 0;
-	uint32_t NullPad32_0 = 0;
-	uint32_t FileType = 0;
+        float ReferencePosX = 0;
+        float ReferencePosY = 0;
+        float ReferencePosZ = 0;
+        uint32_t NumLODs = 0;
 	uint32_t NumMeshes = 0;
-	uint32_t NullPad32_1 = 0;
-	uint64_t UnkHash = 0;		        // if zero, uses UnkTuple[2] at end of BML headers
-	uint32_t NullPad32_2 = 0;
     };
 
     struct LWO_MESH_HEADER
     {
-        uint32_t UnkInt1 = 0;
-        uint32_t UnkInt2 = 0;
-        uint32_t DeclStrlen = 0;
-    };
-
-    struct LWO_MESH_HEADER_SHORT
-    {
-        uint32_t UnkInt2 = 0;
         uint32_t DeclStrlen = 0;
     };
 
     struct LWO_MESH_FOOTER
     {
-        uint32_t UnkInt3 = 0;
+        uint32_t UnkHash = 0;
         uint32_t Dummy1 = 0;
-        uint32_t NullPad = 0;
+        uint32_t Always0 = 0;
     };
 
     struct LWO_LOD_INFO
     {
-	uint32_t NullPad32 = 0;
 	uint32_t DummyMask = 0;
         uint32_t NumVertices = 0;
         uint32_t NumEdges = 0;
@@ -65,7 +54,25 @@ namespace HAYDEN
         std::string MaterialDeclName;
         LWO_MESH_FOOTER MeshFooter;
         std::vector<LWO_LOD_INFO> LODInfo;
-        uint32_t UnkTuple[2] = { 0 };              // Only if LWO_HEADER.UnkHash == 0
+    };
+
+    struct TextureAxis {
+        Mat3 axis;
+        Vector3 origin;
+        Vector2 scale;
+    };
+
+    struct LWO_MODEL_SETTINGS
+    {
+        float LightmapSurfaceAreaSqrt = 0;
+        int LightmapWidth = 0;
+        int LightmapHeight = 0;
+        uint32_t NumTextureAxes = 0;
+    };
+
+    struct ModelGeoDecalProjection {
+        Vector4 projS;
+        Vector4 projT;
     };
     
     struct LWO_STREAMDB_HEADER
@@ -122,7 +129,16 @@ namespace HAYDEN
 
             // Serialized file data
             LWO_METADATA Metadata;
+            std::vector<float> MaxLODDeviations;
+            uint32_t IsStreamable;
             std::vector<LWO_MESH_INFO> MeshInfo;
+            LWO_MODEL_SETTINGS ModelSettings;
+            std::vector<TextureAxis> TextureAxes;
+            uint32_t NumGeoDecals = 0;
+            std::vector<ModelGeoDecalProjection> Projections;
+            std::string GeoDecalDeclName;
+            uint32_t GeoDecalTintStartOffset;
+            std::vector<uint8_t> StreamedSurfaces;
             std::vector<LWO_STREAMDB_HEADER> StreamDBHeaders;
             std::vector<LWO_STREAMDB_DATA> StreamDBData;                         // Used if LWO version = 60
             std::vector<LWO_STREAMDB_DATA_VARIANT> StreamDBDataVariant;          // Used in LWO version = 124 (uv lightmap)
@@ -130,7 +146,6 @@ namespace HAYDEN
             
             // Only for world brushes and .bmodels
             std::vector<uint8_t> EmbeddedGeo;
-            float UnkNullOrFloat = 0;                                            // Non-zero value here is used to detect "world brush" model type
 
         private:
 

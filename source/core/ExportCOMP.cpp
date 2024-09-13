@@ -11,7 +11,7 @@ namespace HAYDEN
         return;
     }
 
-    bool COMPExportTask::Export(const fs::path exportPath, const std::string resourcePath)
+    bool COMPExportTask::Export(fs::path exportPath, const std::string resourcePath, bool isPK5)
     {
         ResourceFileReader resourceFile(resourcePath);
         std::vector<uint8_t> compFile = resourceFile.GetEmbeddedFileHeader(resourcePath, _ResourceDataOffset, _ResourceDataLength, _ResourceDataLengthDecompressed);
@@ -20,17 +20,27 @@ namespace HAYDEN
             return 0;
 
         // Read compressed and decompressed size from comp file header
-        int decompressedSize = *(int*)(compFile.data() + 0);
-        int compressedSize = *(int*)(compFile.data() + 8);
+        uint32_t decompressedSize = *(uint32_t*)(compFile.data() + 0);
+        uint32_t compressedSize = *(uint32_t*)(compFile.data() + 8);
 
         // Remove header and decompress remaining data
         compFile.erase(compFile.begin(), compFile.begin() + 16);
-        compFile = oodleDecompress(compFile, decompressedSize);
+
+        // If compressed size = -1, file isn't compressed. Seen in some wad7s
+        if (compressedSize != -1)
+            compFile = oodleDecompress(compFile, decompressedSize);
 
         if (compFile.empty())
         {
             fprintf(stderr, "Error: Failed to decompress: %s \n", _FileName.c_str());
             return 0;
+        }
+
+        if (isPK5)
+        {
+            // Delete temporary IDCL file we created, write extracted file here
+            fs::remove(resourcePath);
+            exportPath = fs::path(resourcePath);
         }
 
         return writeToFilesystem(compFile, exportPath);

@@ -10,45 +10,26 @@ namespace HAYDEN
         Metadata = *(LWO_METADATA*)(binaryData.data() + offset);
         MeshInfo.resize(Metadata.NumMeshes);
 
-        // Determine BMLr type & count
-        if (Metadata.UnkHash == 0)
+        // Read LOD Deviations
+        offset += sizeof(LWO_METADATA);
+        MaxLODDeviations.resize(Metadata.NumLODs);
+
+        for (int i = 0; i < Metadata.NumLODs; i++)
         {
-            _BMLCount = 1;
-            _UseExtendedBML = 1;
-        }
-        else if(Metadata.UnkHash != 0 && Metadata.NullPad32_2 != 0)
-        {
-            _BMLCount = 4;
-            _UseExtendedBML = 0;
-            _UseShortMeshHeader = 1;
-        }
-        else
-        {
-            _BMLCount = 3;
-            _UseExtendedBML = 0;
+            MaxLODDeviations[i] = *(uint32_t*)(binaryData.data() + offset);
+            offset += sizeof(uint32_t);
         }
 
-        // Advance offset to start of Mesh info
-        offset += sizeof(LWO_METADATA);
+        IsStreamable = *(uint32_t*)(binaryData.data() + offset);
+        offset += sizeof(uint32_t);
 
         // Read mesh and material info
         for (int i = 0; i < Metadata.NumMeshes; i++)
         {
-            if (i > 0 && _UseShortMeshHeader)
-            {
-                MeshInfo[i].MeshHeader.UnkInt2 = *(uint32_t*)(binaryData.data() + offset);
-                offset += sizeof(uint32_t);
-                MeshInfo[i].MeshHeader.DeclStrlen = *(uint32_t*)(binaryData.data() + offset);
-                offset += sizeof(uint32_t);
-            }
-            else
-            {
-                MeshInfo[i].MeshHeader = *(LWO_MESH_HEADER*)(binaryData.data() + offset);
-                offset += sizeof(LWO_MESH_HEADER);
-            }
+            MeshInfo[i].MeshHeader = *(LWO_MESH_HEADER*)(binaryData.data() + offset);
+            offset += sizeof(LWO_MESH_HEADER);
 
             int strLen = MeshInfo[i].MeshHeader.DeclStrlen;
-
             if (strLen < 0 || strLen > 1024)
             {
                 // ADD ERROR HANDLER
@@ -62,67 +43,76 @@ namespace HAYDEN
             MeshInfo[i].MeshFooter = *(LWO_MESH_FOOTER*)(binaryData.data() + offset);
             offset += sizeof(LWO_MESH_FOOTER);
 
-            // Read BMLr data (level-of-detail info for each mesh)
-            MeshInfo[i].LODInfo.resize(_BMLCount);
-
-            for (int j = 0; j < _BMLCount; j++)
+            // Read LOD info for each mesh
+            _BMLCount = Metadata.NumLODs;
+            MeshInfo[i].LODInfo.resize(Metadata.NumLODs);
+            for (int j = 0; j < Metadata.NumLODs; j++)
             {
-                MeshInfo[i].LODInfo[j] = *(LWO_LOD_INFO*)(binaryData.data() + offset);
+                uint32_t absent = *(uint32_t*)(binaryData.data() + offset);
+                offset += sizeof(uint32_t);
 
-                if (MeshInfo[i].LODInfo[j].NullPad32 != 0)
+                if (absent == 0)
                 {
-                    _BMLCount = j;
-                    MeshInfo[i].LODInfo.resize(_BMLCount);
-                    offset += sizeof(uint32_t);
-                }
-                else
-                {
+                    MeshInfo[i].LODInfo[j] = *(LWO_LOD_INFO*)(binaryData.data() + offset);
                     offset += sizeof(LWO_LOD_INFO);
                 }
-
-                // No idea what these are for
-                if (_UseExtendedBML)
-                {
-                    MeshInfo[i].UnkTuple[0] = *(uint32_t*)(binaryData.data() + offset);
-                    offset += sizeof(uint32_t);
-
-                    MeshInfo[i].UnkTuple[1] = *(uint32_t*)(binaryData.data() + offset);
-                    offset += sizeof(uint32_t); 
-                }
             }
+        }
+
+        // Read model settings
+        ModelSettings = *(LWO_MODEL_SETTINGS*)(binaryData.data() + offset);
+        offset += sizeof(LWO_MODEL_SETTINGS);
+
+        // Read texture axes
+        TextureAxes.resize(ModelSettings.NumTextureAxes);
+        for (int i = 0; i < ModelSettings.NumTextureAxes; i++)
+        {
+            TextureAxes[i] = *(TextureAxis*)(binaryData.data() + offset);
+            offset += sizeof(TextureAxis);
+        }
+
+        // Read geo decals
+        NumGeoDecals = *(uint32_t*)(binaryData.data() + offset);
+        Projections.resize(NumGeoDecals);
+        offset += sizeof(uint32_t);
+
+        if (NumGeoDecals > 0)
+        {
+            // Read projections
+            for (int i = 0; i < NumGeoDecals; i++)
+            {
+                Projections[i] = *(ModelGeoDecalProjection*)(binaryData.data() + offset);
+                offset += sizeof(ModelGeoDecalProjection);
+            }
+        }
+
+        // Read geodecal decl name
+        uint32_t strLen = *(uint32_t*)(binaryData.data() + offset);
+        offset += sizeof(uint32_t);
+        GeoDecalDeclName.resize(strLen);
+        GeoDecalDeclName = std::string(binaryData.data() + offset, binaryData.data() + offset + strLen);
+        offset += strLen;
+
+        // Read geodecal tint start offset
+        GeoDecalTintStartOffset = *(uint32_t*)(binaryData.data() + offset);
+        offset += sizeof(uint32_t);
+
+        // Read streamed surfaces
+        uint32_t streamedSurfacesCount = Metadata.NumLODs * Metadata.NumMeshes;
+        StreamedSurfaces.resize(streamedSurfacesCount);
+        for (int i = 0; i < streamedSurfacesCount; i++)
+        {
+            StreamedSurfaces[i] = *(uint8_t*)(binaryData.data() + offset);
+            offset += sizeof(uint8_t);
         }
 
         // Get embedded model geometry if needed
         if (hasEmbeddedGeo)
         {
-            // Skip 8 unknown bytes
-            offset += 8;
-
-            // If this is non-zero, we have a world brush
-            // This needs to be set for LWO::SerializeEmbeddedGeo() to distinguish between world_ and .bmodel.
-            UnkNullOrFloat = *(float*)(binaryData.data() + offset);
-            offset += sizeof(float);
-            
-            // Skip past 29 unknown bytes - geometry starts here
-            offset += 29;
-
-            // If there is more than 1 material, skip ahead additional +5 bytes for each material
-            if (Metadata.NumMeshes > 1)
-            {
-                int skipAhead = (5 * (Metadata.NumMeshes - 1));
-                offset += skipAhead;
-            }
-
             EmbeddedGeo.insert(EmbeddedGeo.begin(), binaryData.begin() + offset, binaryData.end());
         }
-        else
+        else if (IsStreamable)
         {
-            // Everything above has been read sequentially.
-            // But now, we will skip a bunch of data in the middle of the LWO header.
-            // The size varies considerably, and most of this data has no known purpose. It is not needed for exporting to OBJ
-            // The last thing we need for exporting is StreamDB info, which is located at the END of the file.
-
-            // StreamDB structure depends on what our LWO version is.
             const uint64_t streamDBStructCount = 5;
             StreamDBHeaders.resize(streamDBStructCount);
             StreamDiskLayout.resize(streamDBStructCount);
@@ -138,10 +128,6 @@ namespace HAYDEN
                 streamDBStructSize += sizeof(LWO_STREAMDB_DATA_VARIANT);
                 StreamDBDataVariant.resize(streamDBStructCount);
             }
-
-            // Move offset to the beginning of streamDB structures
-            // Calculated from end of file.
-            offset = binaryData.size() - (streamDBStructSize * streamDBStructCount);
 
             // Read StreamDB info
             for (int i = 0; i < streamDBStructCount; i++)
@@ -162,6 +148,12 @@ namespace HAYDEN
 
                 StreamDiskLayout[i] = *(LWO_GEOMETRY_STREAMDISK_LAYOUT*)(binaryData.data() + offset);
                 offset += sizeof(LWO_GEOMETRY_STREAMDISK_LAYOUT);
+            }
+
+            // Abort export in this case, we can't handle this yet.
+            if (StreamDBHeaders[0].NumStreams > 1)
+            {
+                return;
             }
         }
 
@@ -208,7 +200,7 @@ namespace HAYDEN
                 offset += sizeof(uint32_t);
 
                 // Skip Lightmap UVs (world brushes only)
-                if (Header.UnkNullOrFloat != 0)
+                if (Header.ModelSettings.LightmapSurfaceAreaSqrt != 0)
                 {
                     offset += sizeof(uint64_t);
                 }

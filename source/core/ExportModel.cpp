@@ -370,7 +370,7 @@ namespace HAYDEN
 
     // Main export function for models.
     // Return 1 for success, 0 for failure.
-    bool ModelExportTask::Export(const fs::path exportPath, const std::string resourcePath, const std::vector<StreamDBFile>& streamDBFiles, const std::vector<ResourceEntry>& resourceData, const GLOBAL_RESOURCES* globalResources, const int modelType)
+    bool ModelExportTask::Export(fs::path exportPath, const std::string resourcePath, const std::vector<StreamDBFile>& streamDBFiles, const std::vector<ResourceEntry>& resourceData, const GLOBAL_RESOURCES* globalResources, const int modelType, bool isPK5)
     {
         ModelExportPath = exportPath;
         ResourcePath = resourcePath;
@@ -412,10 +412,37 @@ namespace HAYDEN
                 _StreamedDataLength = _LWOHeader.StreamDiskLayout[0].CompressedSize;                      // [0] = LOD_ZERO
                 _StreamedDataLengthDecompressed = _LWOHeader.StreamDiskLayout[0].DecompressedSize;        // [0] = LOD_ZERO
             }
+
+            // We can't handle this yet, abort
+            if (_LWOHeader.StreamDBHeaders[0].NumStreams > 1)
+            {
+                return 0;
+            }
         }
-        
+
+        // For models in .PK5 archives
+        if (isPK5)
+        {
+            if (_LWOHeader.EmbeddedGeo.empty())
+            {
+                // Geometry data starts immediately after the header
+                modelData.resize(_StreamedDataLengthDecompressed);
+                modelData = resourceFile.GetEmbeddedFileHeader(resourcePath, _ResourceDataLength, _StreamedDataLength, _StreamedDataLengthDecompressed);
+            }
+            else
+            {
+                // All data is in LWO header, no 2nd file to extract
+                modelData = _LWOHeader.EmbeddedGeo;
+            }
+
+            // Delete temporary IDCL file we created, write extracted image here
+            fs::remove(resourcePath);
+            fs::path tempPath = fs::path(resourcePath).replace_extension("").replace_extension("");
+            ModelExportPath = fs::path(tempPath);
+        }
+
         // Extract geometry from streamdb (needed for most files except .bmodel and world brushes)
-        if (geometryIsStreamed)
+        if (!isPK5 && geometryIsStreamed)
         {
             // Convert resourceID to streamFileID
             _StreamedDataHash = resourceFile.CalculateStreamDBIndex(_ResourceID);
@@ -486,27 +513,31 @@ namespace HAYDEN
             }
         }
 
-        // Remove any duplicate materials
-        std::sort(MaterialData.begin(), MaterialData.end(), [](const MaterialInfo& a, const MaterialInfo& b) {
-            return (a.DeclFileName < b.DeclFileName);
-        });
+        // Skip material and texture gen for models in PK5s
+        if (!isPK5)
+        {
+            // Remove any duplicate materials
+            std::sort(MaterialData.begin(), MaterialData.end(), [](const MaterialInfo& a, const MaterialInfo& b) {
+                return (a.DeclFileName < b.DeclFileName);
+                });
 
-        auto it = std::unique(MaterialData.begin(), MaterialData.end(), [](const MaterialInfo& a, const MaterialInfo& b) {
-            if (a.DeclFileName == b.DeclFileName)
-                return 1;
-            return 0;
-        });
+            auto it = std::unique(MaterialData.begin(), MaterialData.end(), [](const MaterialInfo& a, const MaterialInfo& b) {
+                if (a.DeclFileName == b.DeclFileName)
+                    return 1;
+                return 0;
+                });
 
-        size_t listSize = it - MaterialData.begin();
-        MaterialData.resize(listSize);
+            size_t listSize = it - MaterialData.begin();
+            MaterialData.resize(listSize);
 
-        // Export the material2 .decls and parse them for textures used in this model
-        ExportMaterial2Decls(resourceData, globalResources);
-        ReadMaterial2Decls();
+            // Export the material2 .decls and parse them for textures used in this model
+            ExportMaterial2Decls(resourceData, globalResources);
+            ReadMaterial2Decls();
 
-        // Find required textures and export them
-        for (int i = 0; i < MaterialData.size(); i++)
-            ExportBIMTextures(resourceData, globalResources, MaterialData[i], streamDBFiles);
+            // Find required textures and export them
+            for (int i = 0; i < MaterialData.size(); i++)
+                ExportBIMTextures(resourceData, globalResources, MaterialData[i], streamDBFiles);
+        }
 
         WriteOBJFile(modelType);
         WriteMTLFile();

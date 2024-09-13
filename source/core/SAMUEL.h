@@ -9,6 +9,7 @@
 #include "idFileTypes/PackageMapSpec.h"
 #include "idFileTypes/ResourceFile.h"
 #include "idFileTypes/StreamDBFile.h"
+#include "idFileTypes/PK5.h"
 
 #include "Common.h"
 #include "ExportManager.h"
@@ -48,13 +49,14 @@ namespace HAYDEN
 	    std::vector<ResourceEntry> _ResourceData;
 	    PackageMapSpec _PackageMapSpec;
             GLOBAL_RESOURCES* _GlobalResources;
+            ArchiveType _ArchiveType;
 
 	    // Outputs to stderr, but also stores error message for passing to another application (Qt, etc).
 	    void ThrowError(bool isFatal, std::string errorMessage, std::string errorDetail = "");
 
 	    // Called on startup
 	    bool SetBasePath(const std::string resourcePath);
-	    void LoadPackageMapSpec();
+	    bool LoadPackageMapSpec();
 
 	    // Loads all global *.resources (needed for LWO export)
 	    void LoadGlobalResources();

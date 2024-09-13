@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.0.0-alpha] - 2024-09-13
+- Adds support for PK5 archives
+- Adds support for WAD7 archives
+- Fix font exports (@brunoanc)
+- Fix some image exporting on Linux (@brunoanc)
+- Improved LWO file handling (thanks @tjoener for format help)
+- Changes how "unsupported" files are handled, can now be exported in raw format instead of being hidden from GUI
+
 ## [2.1.3-alpha] - 2022-11-04
 - Adds support for BMODEL format (export to OBJ)
 - Adds support for world brush format (export to OBJ)

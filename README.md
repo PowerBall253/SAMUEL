@@ -1,4 +1,4 @@
-# DOOM Eternal Asset Extractor (SAMUEL) v2.1.3-alpha (prerelease)
+# DOOM Eternal Asset Extractor (SAMUEL) v3.0-alpha (prerelease)
 
 SAMUEL is a tool for extracting assets from DOOM Eternal. 
 
@@ -10,6 +10,7 @@ It is cross-platform, open-source, and features an easy-to-use graphical interfa
 2. Export full-size images for use in texture modding (in .png format).
 3. Export .lwo and .md6mesh files to the .obj file format.
 4. Export .bmodel and world_ files (world brush) to the .obj file format.
+5. Extract contents of .resources, .pk5, .wad7 archives
 
 Files will be extracted to the "exports" folder. Models will be extracted to the "modelExports" folder. When exporting a model, all of the model's textures and material2 .decl files will also be exported.
 
@@ -30,8 +31,9 @@ This will obviously get compared to VEGA (the other asset extraction tool), so i
 
 ## Credits:
 
-* SamPT ([@brongo](https://github.com/brongo)) - Primary author/developer of the SAMUEL tool. Reverse-engineered the Doom Eternal .streamdb file format, .resources format, image file formats, .lwo format, .md6mesh headers, and discovered how to export files from .streamdb.
-* PowerBall253 ([@brunoanc](https://github.com/brunoanc)) - Many HUGE contributions in the form of code & testing. Responsible for Linux/MacOS compatibility, packageMapSpec parser, and figuring out Qt multithreading. Also assisted with reverse-engineering of Doom Eternal BIM (bimage) header formats.
+* SamPT ([@brongo](https://github.com/brongo)) - Primary author/developer of the SAMUEL tool. Reverse engineering work for supported file formats.
+* powerball253 ([@brunoanc](https://github.com/brunoanc)) - Many HUGE contributions in the form of code & testing. Responsible for Linux/MacOS compatibility, packageMapSpec parser, Qt multithreading. Assisted with reverse-engineering of Doom Eternal BIM (bimage) header formats.
+* tjoener ([@jandk](https://github.com/jandk)) - His work on the [Valen](https://github.com/jandk/valen) tool has inspired several improvements. Improved model handling and pk5, wad7 support.
 * [DOOM 2016+ Modding Discord](https://discord.gg/ymRvQaU) for support and testing, and encouraging future developments.
 
 

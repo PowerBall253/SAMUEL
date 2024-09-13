@@ -32,7 +32,7 @@ namespace HAYDEN
             bool LocateFileInStreamDB(const std::vector<StreamDBFile>& streamDBFiles);            
 
             // Main Export function
-            bool Export(const fs::path exportPath, const std::string resourcePath, const std::vector<StreamDBFile>& streamDBFiles, bool reconstructZ = false);
+            bool Export(fs::path exportPath, const std::string resourcePath, const std::vector<StreamDBFile>& streamDBFiles, bool reconstructZ = false, bool isPK5 = false);
 
             // Constructor
             BIMExportTask(const ResourceEntry resourceEntry);

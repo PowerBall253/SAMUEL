@@ -36,25 +36,24 @@ namespace HAYDEN
     }
 
     // Read the game packagemapspec.json file into memory
-    void SAMUEL::LoadPackageMapSpec()
+    bool SAMUEL::LoadPackageMapSpec()
     {
-        try
-        {
-            // read input filestream into stringstream
-            std::ifstream inputStream = std::ifstream(_BasePath + (char)fs::path::preferred_separator + "packagemapspec.json");
-            std::stringstream strStream;
-            strStream << inputStream.rdbuf();
+        // read input filestream into stringstream
+        std::ifstream inputStream = std::ifstream(_BasePath + (char)fs::path::preferred_separator + "packagemapspec.json");
+        std::stringstream strStream;
+        strStream << inputStream.rdbuf();
 
-            // convert to static string and call PackageMapSpec constructor.
-            std::string jsonStream = strStream.str();
-            _PackageMapSpec = PackageMapSpec(jsonStream);
-            return;
-        }
-        catch (...)
+        // convert to static string and make sure we were able to read from the file
+        std::string jsonStream = strStream.str();
+        if (jsonStream.empty())
         {
-            ThrowError(1,"Failed to load packagemapspec.json.");
-            return;
+            ThrowError(1, "Failed to load packagemapspec.json.");
+            return 0;
         }
+            
+        // call PackageMapSpec constructor
+        _PackageMapSpec = PackageMapSpec(jsonStream);
+        return 1;
     }
 
     // Populate _StreamDBFileList based on currently loaded *.resources
@@ -169,48 +168,81 @@ namespace HAYDEN
     // Main resource loading function
     bool SAMUEL::LoadResource(const std::string resourcePath)
     {
-        _HasResourceLoadError = 0;
-        _ResourcePath = resourcePath;
-        _ResourceFileName = fs::path(_ResourcePath).filename().string();
-
-        // Clear any existing .resources data
+        // Clear any existing file data
         _ResourceData.clear();
         _GlobalResources->Files.clear();
 
-        // Make sure this is a *.resources file
-        if (_ResourcePath.rfind(".resources") == -1)
+        // Load the currently requested archive
+        switch (_ArchiveType)
         {
-            ThrowError(0, "Not a valid .resources file.", "Please load a file with the .resources or .resources.backup file extension.");
-            _HasResourceLoadError = 1;
-            return 0;
-        }
+            case ArchiveType::TYPE_PK5:
 
-        // Load the currently requested *.resources file + globals.
-        try
-        {
-            ResourceFileReader reader(_ResourcePath);
-            _ResourceData = reader.ParseResourceFile();
-            LoadGlobalResources();
-        }
-        catch (...)
-        {
-            ThrowError(0, "Failed to read .resources file.", "Please load a file with the .resources or .resources.backup file extension.");
-            _HasResourceLoadError = 1;
-            return 0;
-        }
+                // Load PK5 archive
+                try
+                {
+                    ResourceFileReader reader(_ResourcePath);
+                    _ResourceData = reader.ParsePK5();
+                }
+                catch (...)
+                {
+                    ThrowError(0, "Failed to read .PK5 file.");
+                    _HasResourceLoadError = 1;
+                    return 0;
+                }
+                return 1;
 
-        // Load .streamdb data
-        try
-        {
-            UpdateStreamDBFileList("gameresources.resources");      
-            UpdateStreamDBFileList("warehouse.resources");          
-            UpdateStreamDBFileList(_ResourcePath);   
-            ReadStreamDBFiles();
-        }
-        catch (...)
-        {
-            ThrowError(1, "Failed to read .streamdb file data.");
-            return 0;
+            case ArchiveType::TYPE_WAD7:
+
+                // Load WAD7 archive
+                try
+                {
+                    ResourceFileReader reader(_ResourcePath);
+                    _ResourceData = reader.ParseWAD7();
+                }
+                catch (...)
+                {
+                    ThrowError(0, "Failed to read .WAD7 file.");
+                    _HasResourceLoadError = 1;
+                    return 0;
+                }
+                return 1;
+
+            case ArchiveType::TYPE_RESOURCES:
+
+                // Load *.resources files + globals.
+                try
+                {
+                    ResourceFileReader reader(_ResourcePath);
+                    _ResourceData = reader.ParseResourceFile();
+                    LoadGlobalResources();
+                }
+                catch (...)
+                {
+                    ThrowError(0, "Failed to read .resources file.");
+                    _HasResourceLoadError = 1;
+                    return 0;
+                }
+
+                // Load .streamdb data
+                try
+                {
+                    UpdateStreamDBFileList("gameresources.resources");
+                    UpdateStreamDBFileList("warehouse.resources");
+                    UpdateStreamDBFileList(_ResourcePath);
+                    ReadStreamDBFiles();
+                }
+                catch (...)
+                {
+                    ThrowError(1, "Failed to read .streamdb file data.");
+                    return 0;
+                }
+                return 1;
+
+            case ArchiveType::TYPE_UNSUPPORTED:
+            default:
+                ThrowError(0, "Unsupported file type.", "Please load a file with the .resources, .resources.backup, .pk5, or .wad7 file extension.");
+                _HasResourceLoadError = 1;
+                return 0;
         }
 
         return 1;
@@ -219,16 +251,27 @@ namespace HAYDEN
     // Main file export function
     bool SAMUEL::ExportFiles(const fs::path outputDirectory, const std::vector<std::vector<std::string>> filesToExport)
     {
-        ExportManager exportManager;
-        return exportManager.ExportFiles(_GlobalResources, _ResourceData, _ResourcePath, _StreamDBFileData, outputDirectory, filesToExport);
+        ExportManager exportManager(_ArchiveType);
+        bool result = exportManager.ExportFiles(_GlobalResources, _ResourceData, _ResourcePath, _StreamDBFileData, outputDirectory, filesToExport);
+
+        if (!result)
+            ThrowError(0, "exportManager.LastErrorMessage", "exportManager.LastErrorDetail");
+
+        return result;
     }
 
     bool SAMUEL::Init(const std::string resourcePath, GLOBAL_RESOURCES& globalResources)
     {     
         _GlobalResources = &globalResources;
+        _HasResourceLoadError = 0;
+        _ResourcePath = resourcePath;
+        _ResourceFileName = fs::path(_ResourcePath).filename().string();
+
+        // Find base directory 
         if (!SetBasePath(resourcePath))
             return 0;
 
+        // Locate Oodle DLL
         if (!oodleInit(_BasePath))
         {
             ThrowError(1,
@@ -238,7 +281,21 @@ namespace HAYDEN
             return 0;
         }
 
-        LoadPackageMapSpec();
+        // Check what kind of archive this is
+        if (_ResourcePath.rfind(".resources") != -1)
+            _ArchiveType = TYPE_RESOURCES;
+        else if (_ResourcePath.rfind(".pk5") != -1)
+            _ArchiveType = TYPE_PK5;
+        else if (_ResourcePath.rfind(".wad7") != -1)
+            _ArchiveType = TYPE_WAD7;
+        else
+            _ArchiveType = TYPE_UNSUPPORTED;
+
+        // Load packagemapspec (if needed)
+        if (_ArchiveType == TYPE_RESOURCES)
+            if (!LoadPackageMapSpec())
+                return 0;        
+
         return 1;
     }
 }

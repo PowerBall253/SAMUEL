@@ -1,5 +1,7 @@
 #include "ResourceFile.h"
 
+namespace fs = std::filesystem;
+
 namespace HAYDEN
 {
     // Reads binary .resources file from local filesystem

@@ -52,7 +52,7 @@ namespace HAYDEN
             void ExportMaterial2Decls(const std::vector<ResourceEntry>& resourceData, const GLOBAL_RESOURCES* globalResources);
             void ReadMaterial2Decls();
 
-            bool Export(const fs::path exportPath, const std::string resourcePath, const std::vector<StreamDBFile>& streamDBFiles, const std::vector<ResourceEntry>& resourceData, const GLOBAL_RESOURCES* globalResources, const int modelType);
+            bool Export(fs::path exportPath, const std::string resourcePath, const std::vector<StreamDBFile>& streamDBFiles, const std::vector<ResourceEntry>& resourceData, const GLOBAL_RESOURCES* globalResources, const int modelType, bool isPK5 = false);
             ModelExportTask(const ResourceEntry resourceEntry);
 
         private:

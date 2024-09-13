@@ -6,7 +6,7 @@ namespace HAYDEN
     uint64_t ResourceFileReader::CalculateStreamDBIndex(uint64_t resourceId, const int mipCount) const
     {
         // Swap endianness of resourceID
-        endianSwap(resourceId);
+        endianSwap64(resourceId);
 
         // Get hex bytes string
         std::string hexBytes = intToHex(resourceId);
@@ -29,7 +29,7 @@ namespace HAYDEN
         uint64_t streamDBIndex = hexToInt64(hexBytes);
 
         // Swap endian again to get streamdb index
-        endianSwap(streamDBIndex);
+        endianSwap64(streamDBIndex);
 
         return streamDBIndex;
     }
@@ -42,7 +42,7 @@ namespace HAYDEN
 
         if (f != NULL)
         {
-            fseek(f, (long)fileOffset, SEEK_SET);
+            fseek64(f, fileOffset, SEEK_SET);
             fread(embeddedHeader.data(), 1, compressedSize, f);
 
             if (embeddedHeader.size() != decompressedSize)
@@ -85,4 +85,86 @@ namespace HAYDEN
         }
         return resourceData;
     };
+
+    // Public function for retrieving .PK5 data in a user-friendly format
+    std::vector<ResourceEntry> ResourceFileReader::ParsePK5()
+    {
+        // read .resources file from filesystem
+        PK5 pk5(ResourceFilePath);
+
+        // allocate vector to hold all entries from this .PK5
+        std::vector<ResourceEntry> resourceData;
+        resourceData.resize(pk5.EntryCount);
+
+        // Parse each resource file and convert to usable data
+        for (uint32_t i = 0; i < pk5.EntryCount; i++)
+        {
+            resourceData[i].DataOffset = pk5.FileEntries[i].DataStartOffset;
+            resourceData[i].DataSize = pk5.FileEntries[i].CompressedSize;
+            resourceData[i].DataSizeUncompressed = pk5.FileEntries[i].UncompressedSize;
+            resourceData[i].CompressionMode = pk5.FileEntries[i].CompressionMode;
+            resourceData[i].Name = pk5.EntryNames[i];
+
+            if (pk5.EntryTypes[i] == EntryType::TYPE_IDCL)
+            {
+                resourceData[i].Version = pk5.EntryVersions[i];
+                resourceData[i].Type = pk5.EmbeddedTypes[i];
+                resourceData[i].isIDCL = 1;
+            }
+            else if (pk5.EntryTypes[i] == EntryType::TYPE_PLAINTEXT)
+            {
+                resourceData[i].Version = 0;
+                resourceData[i].Type = "rs_streamfile";
+            }
+                
+        }
+        return resourceData;
+    }
+
+    // Public function for retrieving .PK5 data in a user-friendly format
+    std::vector<ResourceEntry> ResourceFileReader::ParseWAD7()
+    {
+        // read .wad7 file from filesystem
+        WAD7 wad7(ResourceFilePath);
+
+        // allocate vector to hold all entries from this .wad7
+        std::vector<ResourceEntry> resourceData;
+        resourceData.resize(wad7.EntryCount);
+
+        // Parse each resource file and convert to usable data
+        for (uint32_t i = 0; i < wad7.EntryCount; i++)
+        {
+            resourceData[i].DataOffset = wad7.FileEntries[i].DataStartOffset;
+            resourceData[i].DataSize = wad7.FileEntries[i].CompressedSize;
+            resourceData[i].DataSizeUncompressed = wad7.FileEntries[i].UncompressedSize;
+            resourceData[i].CompressionMode = wad7.FileEntries[i].CompressionMode;
+            resourceData[i].Name = wad7.EntryNames[i];
+
+            if (wad7.EntryTypes[i] == EntryType::TYPE_IDCL)
+            {
+                resourceData[i].Version = wad7.EntryVersions[i];
+                resourceData[i].Type = wad7.EmbeddedTypes[i];
+                resourceData[i].isIDCL = 1;
+            }
+            else if (wad7.EntryTypes[i] == EntryType::TYPE_PLAINTEXT)
+            {
+
+
+                // Uncooked files - determine type based on file extension
+                if (resourceData[i].Name.rfind(".decl") != -1)
+                {
+                    resourceData[i].Version = 0;
+                    resourceData[i].Type = "rs_streamfile";
+                }               
+                else
+                {
+                    resourceData[i].Version = 0;
+                    resourceData[i].Type = fs::path(resourceData[i].Name).extension().string().substr(1);
+                }
+                    
+            }
+
+        }
+        return resourceData;
+    }
 }

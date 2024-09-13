@@ -13,6 +13,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     ui->radioShowEntities->setEnabled(false);
     ui->radioShowImages->setEnabled(false);
     ui->radioShowModels->setEnabled(false);
+    //ui->tableWidget->setColumnHidden(4, true); // Hidden column contains 1 or 0 to denote IDCL embedded file
 }
 MainWindow::~MainWindow()
 {
@@ -128,27 +129,37 @@ void MainWindow::PopulateGUIResourceTable(std::vector<std::string> searchWords)
         switch (_SearchMode)
         {
             case 0:
-                if (resourceData[i].Version != 67 &&
+                /*
+                if (resourceData[i].Version != 99 &&
+                    resourceData[i].Version != 67 &&
                     resourceData[i].Version != 31 &&
                     resourceData[i].Version != 21 &&
                     resourceData[i].Version != 1 &&
                     resourceData[i].Version != 0)
-                    continue;
+                    continue;*/
                 break;
             case 1:
                 if (resourceData[i].Version != 0)
+                    continue;
+                if (resourceData[i].Type != "rs_streamfile")
                     continue;
                 break;
             case 2:
                 if (resourceData[i].Version != 1)
                     continue;
+                if (resourceData[i].Type != "compfile")
+                    continue;
                 break;
             case 3:
-                if (resourceData[i].Version != 21)
+                if (resourceData[i].Version != 21 && resourceData[i].Version != 0)
+                    continue;
+                if (resourceData[i].Type != "image" && resourceData[i].Type != "tga")
                     continue;
                 break;
             case 4:
-                if ((resourceData[i].Version != 31) && (resourceData[i].Version != 67))
+                if (resourceData[i].Version != 31 && resourceData[i].Version != 67 && resourceData[i].Version != 0)
+                    continue;
+                if (resourceData[i].Type != "model" && resourceData[i].Type != "lwo" && resourceData[i].Type != "md6mesh" && resourceData[i].Type != "md6skl" && resourceData[i].Type != "baseModel")
                     continue;
                 break;
             default:
@@ -169,6 +180,11 @@ void MainWindow::PopulateGUIResourceTable(std::vector<std::string> searchWords)
                 continue;
         }
 
+        // Filter out broken/empty IDCL containers
+        // One example can be found in shell.wad7
+        if (resourceData[i].Version == 9999)
+            continue;
+
         // Filter out unsupported md6
         if (resourceData[i].Version == 31)
         {
@@ -183,6 +199,7 @@ void MainWindow::PopulateGUIResourceTable(std::vector<std::string> searchWords)
                 continue;
         }
 
+/*
         // Filter out unsupported "version 1" files
         if (resourceData[i].Version == 1 && resourceData[i].Type != "compfile")
             continue;
@@ -190,7 +207,7 @@ void MainWindow::PopulateGUIResourceTable(std::vector<std::string> searchWords)
         // Filter out unsupported "version 0" files
         if (resourceData[i].Version == 0 && resourceData[i].Type != "rs_streamfile")
             continue;
-
+*/
         int row_count = ui->tableWidget->rowCount();
         ui->tableWidget->insertRow(row_count);
 
@@ -205,23 +222,26 @@ void MainWindow::PopulateGUIResourceTable(std::vector<std::string> searchWords)
         QTableWidgetItem *tableResourceType = new QTableWidgetItem(qResourceType);
 
         // Set Resource Version
-        std::string resourceVersion = std::to_string(resourceData[i].Version);
-        QString qResourceVersion = QString::fromStdString(resourceVersion);
-        QTableWidgetItem *tableResourceVersion = new QTableWidgetItem(qResourceVersion);
+        QTableWidgetItem* tableResourceVersion = new QTableWidgetItem();
+        tableResourceVersion->setData(0, resourceData[i].Version);
 
         // Set Resource Status
         QTableWidgetItem *tableResourceStatus;
+        tableResourceStatus = new QTableWidgetItem("Loaded");
 
-        if (resourceData[i].Version == 31)
-            tableResourceStatus = new QTableWidgetItem("Experimental");
+        // Set IDCL boolean
+        QTableWidgetItem* tableResourceIDCL;
+        if (resourceData[i].isIDCL)
+            tableResourceIDCL = new QTableWidgetItem("1");
         else
-            tableResourceStatus = new QTableWidgetItem("Loaded");
+            tableResourceIDCL = new QTableWidgetItem("0");
 
         // Populate Table Row
         ui->tableWidget->setItem(row_count, 0, tableResourceName);
         ui->tableWidget->setItem(row_count, 1, tableResourceType);
         ui->tableWidget->setItem(row_count, 2, tableResourceVersion);
         ui->tableWidget->setItem(row_count, 3, tableResourceStatus);
+        ui->tableWidget->setItem(row_count, 4, tableResourceIDCL);
     }
 
     QString labelCount = QString::number(ui->tableWidget->rowCount());
@@ -265,12 +285,13 @@ void MainWindow::on_btnExportSelected_clicked()
 
     // Iterate through table, add items to export list
     std::vector<std::vector<std::string>> itemExportRows;
-    for (int64_t i = 0; i < itemExportQList.size(); i+=4)
+    for (int64_t i = 0; i < itemExportQList.size(); i+=5)
     {
         std::vector<std::string> rowText = {
             itemExportQList[i]->text().toStdString(),
             itemExportQList[i+1]->text().toStdString(),
-            itemExportQList[i+2]->text().toStdString()
+            itemExportQList[i+2]->text().toStdString(),
+            itemExportQList[i+4]->text().toStdString()
         };
         itemExportRows.push_back(rowText);
         itemExportQList[i+3]->setText("Exported");

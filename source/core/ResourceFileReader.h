@@ -5,6 +5,8 @@
 #include <filesystem>
 
 #include "idFileTypes/ResourceFile.h"
+#include "idFileTypes/PK5.h"
+#include "idFileTypes/WAD7.h"
 
 #include "Oodle.h"
 #include "Utilities.h"
@@ -24,6 +26,15 @@ namespace HAYDEN
         uint16_t CompressionMode = 0;
         std::string Name;
         std::string Type;
+        bool isIDCL = 0;
+    };
+
+    enum ArchiveType
+    {
+        TYPE_RESOURCES = 0,
+        TYPE_PK5 = 1,
+        TYPE_WAD7 = 2,
+        TYPE_UNSUPPORTED = 999
     };
 
     class ResourceFileReader
@@ -32,6 +43,8 @@ namespace HAYDEN
             fs::path ResourceFilePath;
 
             std::vector<ResourceEntry> ParseResourceFile();
+            std::vector<ResourceEntry> ParsePK5();
+            std::vector<ResourceEntry> ParseWAD7();
             uint64_t CalculateStreamDBIndex(uint64_t resourceId, const int mipCount = -6) const;
             std::vector<uint8_t> GetEmbeddedFileHeader(const std::string resourcePath, const uint64_t fileOffset, const uint64_t compressedSize, const uint64_t decompressedSize);
             ResourceFileReader(const fs::path resourceFilePath) { ResourceFilePath = resourceFilePath; }
