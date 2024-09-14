@@ -130,15 +130,6 @@ namespace HAYDEN
 
         // Convert DDS file to PNG format
         PNGFile pngFile;
-        std::vector<uint8_t> pngData = pngFile.ConvertDDStoPNG(ddsFile, static_cast<ImageType>(_ImgType), reconstructZ);
-
-        if (pngData.empty())
-        {
-            fprintf(stderr, "ERROR: Failed to read from given file. \n");
-            return 0;
-        }
-
-        // Write file to local filesystem
-        return writeToFilesystem(pngData, exportPath);
+        return pngFile.ConvertDDStoPNG(ddsFile, static_cast<ImageType>(_ImgType), exportPath, reconstructZ);
     }
 }

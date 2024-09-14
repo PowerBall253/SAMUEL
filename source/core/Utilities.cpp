@@ -38,6 +38,10 @@ namespace HAYDEN
     // Recursive mkdir, bypassing PATH_MAX limitations on Windows       
     bool mkpath(const fs::path& path)
     {
+        if (fs::is_directory(path)) {
+            return true;
+        }
+
         std::error_code ec;
         #ifdef _WIN32
         // "\\?\" alongside the wide string functions is used to bypass PATH_MAX
@@ -49,17 +53,18 @@ namespace HAYDEN
         return ec.value() == 0;
     }
 
-    #ifdef _WIN32
     // Opens FILE* with long filepath, bypasses PATH_MAX limitations in Windows
-    FILE* openLongFilePathWin32(const fs::path& path)
+    FILE* openLongFilePath(const fs::path& path)
     {
+        #ifdef _WIN32
         // "\\?\" alongside the wide string functions is used to bypass PATH_MAX
         // Check https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd for details 
         std::wstring wPath = L"\\\\?\\" + path.wstring();
-        FILE* file = _wfopen(wPath.c_str(), L"wb");
-        return file;
+        return _wfopen(wPath.c_str(), L"wb");
+        #else
+        return fopen(path.c_str(), "wb");
+        #endif
     }
-    #endif
 
     // Remove quotation marks from a string
     std::string stripQuotes(std::string str)
@@ -77,21 +82,14 @@ namespace HAYDEN
         fs::path folderPath = outPath;
         folderPath.remove_filename();
 
-        if (!fs::exists(folderPath))
+        if (!mkpath(folderPath))
         {
-            if (!mkpath(folderPath))
-            {
-                fprintf(stderr, "Error: Failed to create directories for file: %s \n", outPath.string().c_str());
-                return 0;
-            }
+            fprintf(stderr, "Error: Failed to create directories for file: %s \n", outPath.string().c_str());
+            return 0;
         }
 
         // open file for writing
-#ifdef _WIN32
-        FILE* outFile = openLongFilePathWin32(outPath); //wb
-#else
-        FILE* outFile = fopen(outPath.string().c_str(), "wb");
-#endif
+        FILE* outFile = openLongFilePath(outPath); //wb
 
         if (outFile == NULL)
         {
