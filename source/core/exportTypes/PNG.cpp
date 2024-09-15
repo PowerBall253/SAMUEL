@@ -16,7 +16,7 @@ namespace HAYDEN
         if (FAILED(initCOM))
         {
             fprintf(stderr, "ERROR: Failed to initialize the COM library. \n");
-            return false
+            return false;
         }
 #endif
 
