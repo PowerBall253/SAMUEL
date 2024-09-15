@@ -24,6 +24,13 @@ jobs:
         ref: dev
         path: repo
 
+    - name: Clone vcpkg
+      uses: actions/checkout@v4
+      with:
+        repository: microsoft/vcpkg
+        ref: master
+        path: vcpkg
+
     - name: Create missing directories
       run: |
         mkdir ${{github.workspace}}/app/usr/bin
@@ -39,10 +46,9 @@ jobs:
         setup-python: false
 
     - name: Run vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgArguments: 'directxmath directx-headers'
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+      run: |
+        ./bootstrap-vcpkg.sh
+        ./vcpkg install directxmath directx-headers
 
     - name: Build with CMake
       run: |
