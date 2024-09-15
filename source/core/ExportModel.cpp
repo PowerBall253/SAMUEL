@@ -21,13 +21,10 @@ namespace HAYDEN
         fs::path outputFile = ModelExportPath / fs::path(_FileName).filename().replace_extension(".obj");
 
         // Create output directories if needed
-        if (!fs::exists(ModelExportPath))
+        if (!mkpath(ModelExportPath))
         {
-            if (!mkpath(ModelExportPath))
-            {
-                fprintf(stderr, "Error: Failed to create directories for file: %s \n", ModelExportPath.string().c_str());
-                return;
-            }
+            fprintf(stderr, "Error: Failed to create directories for file: %s \n", ModelExportPath.string().c_str());
+            return;
         }
 
         // Construct OBJ file from model data

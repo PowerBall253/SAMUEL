@@ -14,14 +14,17 @@ set(CMAKE_AUTORCC ON)
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 
-if (WIN32)
-    set(BUILD_TOOLS OFF CACHE BOOL "Build tex command-line tools" FORCE)
-    set(BUILD_SAMPLE OFF CACHE BOOL "Build DDSView sample (requires fxc.exe)" FORCE)
-    set(BUILD_DX11 OFF CACHE BOOL "Build with DirectX11 Runtime support (requires fxc.exe)" FORCE)
-    set(BUILD_DX12 OFF CACHE BOOL "Build with DirectX12 Runtime support" FORCE)
+set(BUILD_TOOLS OFF CACHE BOOL "Build tex command-line tools" FORCE)
+set(BUILD_SAMPLE OFF CACHE BOOL "Build DDSView sample (requires fxc.exe)" FORCE)
+set(BUILD_DX11 OFF CACHE BOOL "Build with DirectX11 Runtime support (requires fxc.exe)" FORCE)
+set(BUILD_DX12 OFF CACHE BOOL "Build with DirectX12 Runtime support" FORCE)
 
-    add_subdirectory(./vendor/DirectXTex)
+if (NOT WIN32)
+    include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
+    set(ENABLE_LIBPNG_SUPPORT ON CACHE BOOL "Build with libpng support")
 endif()
+
+add_subdirectory(./vendor/DirectXTex)
 
 set(PROJECT_SOURCES
     ./source/core/exportTypes/DDSHeader.cpp
@@ -83,7 +86,7 @@ set(PROJECT_SOURCES
 )
 
 if (NOT WIN32)
-    set(PROJECT_SOURCES ${PROJECT_SOURCES} ./vendor/detex/detex.h ./vendor/ooz/ooz.hpp)
+    set(PROJECT_SOURCES ${PROJECT_SOURCES} ./vendor/ooz/ooz.hpp)
 endif()
 
 set(APP_ICON_RESOURCE_WINDOWS "./resources/icon.rc")
@@ -108,14 +111,10 @@ else()
     endif()
 endif()
 
-target_link_libraries(SAMUEL PRIVATE Qt${QT_VERSION_MAJOR}::Widgets ${CMAKE_DL_LIBS})
+target_link_libraries(SAMUEL PRIVATE Qt${QT_VERSION_MAJOR}::Widgets ${CMAKE_DL_LIBS} DirectXTex)
 
-if (WIN32)
-    target_link_libraries(SAMUEL PRIVATE DirectXTex)
-else()
-    find_package(PNG REQUIRED)
-    include_directories(${PNG_INCLUDE_DIR})
-    target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/detex/libdetex.a ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz.a ${PNG_LIBRARY})
+if (NOT WIN32)
+    target_link_libraries(SAMUEL PRIVATE ${CMAKE_SOURCE_DIR}/vendor/ooz/libooz.a)
 endif()
 
 if (MSVC)

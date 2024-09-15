@@ -39,10 +39,10 @@ namespace HAYDEN
                 uint32_t stringLength = 0;
                 fread(&stringLength, sizeof(uint32_t), 1, f);
 
-                char* stringBuffer = new char[stringLength];
-                stringBuffer[stringLength] = '\0';
-                fread(stringBuffer, stringLength, 1, f);
-                EntryNames[i] = stringBuffer;
+                std::unique_ptr<char> stringBuffer(new char[stringLength + 1]);
+                stringBuffer.get()[stringLength] = '\0';
+                fread(stringBuffer.get(), stringLength, 1, f);
+                EntryNames[i] = stringBuffer.get();
 
                 fread(&FileEntries[i], sizeof(PK5_ENTRY), 1, f);
 
@@ -97,9 +97,10 @@ namespace HAYDEN
                     for (uint64_t i = 0; i < numStrings; i++)
                     {
                         int stringLength = stringOffsets[i + 1] - stringOffsets[i];
-                        char* stringBuffer = new char[stringLength];
-                        fread(stringBuffer, stringLength, 1, f);
-                        stringEntries[i] = stringBuffer;
+                        std::unique_ptr<char> stringBuffer(new char[stringLength + 1]);
+                        stringBuffer.get()[stringLength] = '\0';
+                        fread(stringBuffer.get(), stringLength, 1, f);
+                        stringEntries[i] = stringBuffer.get();
                     }
 
                     EmbeddedTypes[i] = stringEntries[idclEntry.PathTuple_OffsetType];

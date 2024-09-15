@@ -54,6 +54,8 @@ If you *want* to build/compile from source, you will need a copy of the [Qt deve
 
 SAMUEL for Windows is tested and compiled using a static build of Qt version 6.1.2.
 
+On Linux, the `directxmath` and `directx-headers` packages from vcpkg are required to be installed, and you must set the `VCPKG_ROOT` environment variable so CMake can find them.
+
 ## Contributing:
 
 Contributions are welcomed. There is lots of room for code cleanup/improvement. All issues and pull requests will be considered. Please note I have limited time, so my response may not be immediate.
