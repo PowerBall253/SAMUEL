@@ -47,6 +47,7 @@ jobs:
 
     - name: Run vcpkg
       run: |
+        cd vcpkg
         ./bootstrap-vcpkg.sh
         ./vcpkg install directxmath directx-headers
 
