@@ -22,8 +22,9 @@ namespace HAYDEN
     void endianSwap32(uint32_t& value);
     void endianSwap64(uint64_t& value);
 
-    // 64bit fseek for windows
+    // Make windows use 64-bit fseek & ftell
     int fseek64(FILE* f, long long offset, int origin);
+    int ftell64(FILE* f);
 
     // Recursive mkdir, bypassing PATH_MAX limitations on Windows
     bool mkpath(const fs::path& path);

@@ -24,14 +24,23 @@ namespace HAYDEN
         return x;
     }
 
-    // Shortcut for 64bit fseek on windows
-    // Use default behavior (already 64bit) for unix
+    // Make windows use 64-bit fseek
     int fseek64(FILE* f, long long offset, int origin)
     {
 #ifdef _WIN32
         return _fseeki64(f, offset, origin);
 #else
         return fseek(f, offset, origin);
+#endif
+    }
+
+    // Make windows use 64-bit ftell
+    int ftell64(FILE* f)
+    {
+#ifdef _WIN32
+        return _ftelli64(f);
+#else
+        return ftell(f);
 #endif
     }
 

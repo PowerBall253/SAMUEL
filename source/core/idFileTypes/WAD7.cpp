@@ -56,17 +56,18 @@ namespace HAYDEN
             // Read first 4 bytes of each entry to identify entry type (IDCL or plaintext)
             for (uint64_t i = 0; i < FileEntries.size(); i++)
             {
+                fseek64(f, FileEntries[i].DataStartOffset - ftell64(f), SEEK_CUR);
+                
                 uint32_t buffer;
-                fseek64(f, FileEntries[i].DataStartOffset, SEEK_SET);
                 fread(&buffer, 4, 1, f);
 
                 // For IDCL files, we want to identify the contents to display in GUI
                 if (buffer == 1279476809)
                 {
                     EntryTypes[i] = EntryType::TYPE_IDCL;
-                    
+
                     // Read IDCL header
-                    fseek64(f, FileEntries[i].DataStartOffset, SEEK_SET);
+                    fseek64(f, -4, SEEK_CUR);
                     ResourceFileHeader idclHeader;
                     fread(&idclHeader, sizeof(ResourceFileHeader), 1, f);            
                     
@@ -74,17 +75,17 @@ namespace HAYDEN
                     if (idclHeader.NumFileEntries != 0)
                     {
                         // Get version - for this type of IDCL only the first entry matters
-                        fseek64(f, FileEntries[i].DataStartOffset, SEEK_SET);
-                        fseek64(f, idclHeader.AddrEntries, SEEK_CUR);
+                        fseek64(f, idclHeader.AddrEntries - sizeof(ResourceFileHeader), SEEK_CUR);
                         ResourceFileEntry idclEntry;
                         fread(&idclEntry, sizeof(ResourceFileEntry), 1, f);
                         EntryVersions[i] = idclEntry.Version;
 
+                        // Advance past any other entries
+                        if (idclHeader.NumFileEntries > 1)
+                            fseek64(f, sizeof(ResourceFileEntry) * (idclHeader.NumFileEntries - 1), SEEK_CUR);
+
                         // Get type string
                         uint64_t numStrings;
-                        uint64_t addrStringCount = idclHeader.AddrEntries + (sizeof(ResourceFileEntry) * idclHeader.NumFileEntries);
-                        fseek64(f, FileEntries[i].DataStartOffset, SEEK_SET);
-                        fseek64(f, addrStringCount, SEEK_CUR);
                         fread(&numStrings, sizeof(uint64_t), 1, f);
 
                         std::vector<uint64_t> stringOffsets;
@@ -109,8 +110,9 @@ namespace HAYDEN
                     }
                     else
                     {
+                        // This will be hidden in GUI, nothing to export
                         EntryVersions[i] = 9999;
-                        EmbeddedTypes[i] = "Empty File - DO NOT EXPORT";
+                        EmbeddedTypes[i] = "Empty File";
                     }
 
                 }
