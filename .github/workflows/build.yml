@@ -33,9 +33,10 @@ jobs:
       run: sudo apt install -y libxcb-cursor0
         
     - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: '6.7.*'
+        setup-python: false
 
     - name: Run vcpkg
       uses: lukka/run-vcpkg@v11
