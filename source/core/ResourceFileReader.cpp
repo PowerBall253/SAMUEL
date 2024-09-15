@@ -159,7 +159,14 @@ namespace HAYDEN
                 else
                 {
                     resourceData[i].Version = 0;
-                    resourceData[i].Type = fs::path(resourceData[i].Name).extension().string().substr(1);
+                    std::string extension = fs::path(resourceData[i].Name).extension().string();
+
+                    if (extension.length() >= 2) {
+                        resourceData[i].Type = extension.substr(1);
+                    }
+                    else {
+                        resourceData[i].Type = "file";
+                    }
                 }
                     
             }
