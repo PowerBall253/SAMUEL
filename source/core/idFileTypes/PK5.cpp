@@ -64,12 +64,12 @@ namespace HAYDEN
                 if (buffer == 1279476809)
                 {
                     EntryTypes[i] = EntryType::TYPE_IDCL;
-                    
+
                     // Read IDCL header
                     fseek(f, FileEntries[i].DataStartOffset, SEEK_SET);
                     ResourceFileHeader idclHeader;
-                    fread(&idclHeader, sizeof(ResourceFileHeader), 1, f);            
-                    
+                    fread(&idclHeader, sizeof(ResourceFileHeader), 1, f);
+
                     // Get version - for this type of IDCL only the first entry matters
                     fseek(f, FileEntries[i].DataStartOffset, SEEK_SET);
                     fseek(f, idclHeader.AddrEntries, SEEK_CUR);
@@ -77,33 +77,43 @@ namespace HAYDEN
                     fread(&idclEntry, sizeof(ResourceFileEntry), 1, f);
                     EntryVersions[i] = idclEntry.Version;
 
-                    // Get type string
-                    uint64_t numStrings;
-                    uint64_t addrStringCount = idclHeader.AddrEntries + (sizeof(ResourceFileEntry) * idclHeader.NumFileEntries);
-                    fseek(f, FileEntries[i].DataStartOffset, SEEK_SET);
-                    fseek(f, addrStringCount, SEEK_CUR);
-                    fread(&numStrings, sizeof(uint64_t), 1, f);
-
-                    std::vector<uint64_t> stringOffsets;
-                    stringOffsets.resize(numStrings + 1);
-                    for (uint64_t j = 0; j < numStrings; j++)
-                        fread(&stringOffsets[j], 8, 1, f);
-                        
-                    stringOffsets[numStrings] = idclHeader.AddrDependencyEntries;
-
-                    // Read strings into vector
-                    std::vector<std::string> stringEntries;
-                    stringEntries.resize(numStrings);
-                    for (uint64_t i = 0; i < numStrings; i++)
+                    // Some PK5 entries are empty due to packaging errors, skip these
+                    if (idclEntry.DataSize != 0)
                     {
-                        int stringLength = stringOffsets[i + 1] - stringOffsets[i];
-                        std::unique_ptr<char> stringBuffer(new char[stringLength + 1]);
-                        stringBuffer.get()[stringLength] = '\0';
-                        fread(stringBuffer.get(), stringLength, 1, f);
-                        stringEntries[i] = stringBuffer.get();
-                    }
+                        // Get type string
+                        uint64_t numStrings;
+                        uint64_t addrStringCount = idclHeader.AddrEntries + (sizeof(ResourceFileEntry) * idclHeader.NumFileEntries);
+                        fseek(f, FileEntries[i].DataStartOffset, SEEK_SET);
+                        fseek(f, addrStringCount, SEEK_CUR);
+                        fread(&numStrings, sizeof(uint64_t), 1, f);
 
-                    EmbeddedTypes[i] = stringEntries[idclEntry.PathTuple_OffsetType];
+                        std::vector<uint64_t> stringOffsets;
+                        stringOffsets.resize(numStrings + 1);
+                        for (uint64_t j = 0; j < numStrings; j++)
+                            fread(&stringOffsets[j], 8, 1, f);
+
+                        stringOffsets[numStrings] = idclHeader.AddrDependencyEntries;
+
+                        // Read strings into vector
+                        std::vector<std::string> stringEntries;
+                        stringEntries.resize(numStrings);
+                        for (uint64_t i = 0; i < numStrings; i++)
+                        {
+                            int stringLength = stringOffsets[i + 1] - stringOffsets[i];
+                            std::unique_ptr<char> stringBuffer(new char[stringLength + 1]);
+                            stringBuffer.get()[stringLength] = '\0';
+                            fread(stringBuffer.get(), stringLength, 1, f);
+                            stringEntries[i] = stringBuffer.get();
+                        }
+
+                        EmbeddedTypes[i] = stringEntries[idclEntry.PathTuple_OffsetType];
+                    }
+                    else
+                    {
+                        // This will be hidden in GUI, nothing to export
+                        EntryVersions[i] = 9999;
+                        EmbeddedTypes[i] = "Empty File";
+                    }
                 }
                 else
                 {
