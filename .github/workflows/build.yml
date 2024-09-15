@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         ref: build-appimage
 
     - name: Clone SAMUEL repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: PowerBall253/SAMUEL
         ref: dev
@@ -35,10 +35,17 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
-        version: '6.5.*'
+        version: '6.7.*'
+
+    - name: Run vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgArguments: 'directxmath directx-headers'
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
 
     - name: Build with CMake
       run: |
+        export VCPKG_ROOT="${{ github.workspace }}/vcpkg"
         cd ${{github.workspace}}/repo
         cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
         cmake --build build --config ${{env.BUILD_TYPE}}
