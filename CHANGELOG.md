@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.0.0-alpha] - 2024-09-13
+## [3.0.0-alpha] - 2024-09-16
 - Adds support for PK5 archives
 - Adds support for WAD7 archives
 - Fix font exports (@brunoanc)
